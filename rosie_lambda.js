@@ -1,4 +1,5 @@
-﻿var babyLogger = require('./babyLogger.js');
+﻿//var babyLogger = require('./babyLogger.js');
+var spotifyConnector = require('./spotifyConnector.js');
 
 /**
  * This sample demonstrates a simple skill built with the Amazon Alexa Skills Kit.
@@ -83,8 +84,10 @@ function onIntent(intentRequest, session, callback) {
     // Dispatch to your skill's intent handlers
     if ("BabyLogger" === intentName) {
         saveBabyLog(intent, session, callback);
-    } else if ("WhatsMyColorIntent" === intentName) {
-        getColorFromSession(intent, session, callback);
+    } else if ("SongFinderStart" === intentName) {
+        songFinderStart(intent, session, callback);
+    } else if ("SongFinderParameter" === intentName) {
+        songFinderParameter(intent, session, callback);
     } else if ("AMAZON.HelpIntent" === intentName) {
         getWelcomeResponse(callback);
     } else if ("AMAZON.StopIntent" === intentName || "AMAZON.CancelIntent" === intentName) {
@@ -129,6 +132,80 @@ function handleSessionEndRequest(callback) {
     var shouldEndSession = true;
 
     callback({}, buildSpeechletResponse(cardTitle, speechOutput, null, shouldEndSession));
+}
+
+function songFinderStart(intent, session, callback)
+{
+    var cardTitle = "Song Finder";
+    var speechOutput = "Please say the song title";
+    // Setting this to true ends the session and exits the skill.
+    repromptText = "Please say the song title, part of it or say 'don't know'";
+    var shouldEndSession = false;
+
+    sessionAttributes = createSongFinderAttributes(null);
+
+    callback(sessionAttributes,
+        buildSpeechletResponse(cardTitle, speechOutput, repromptText, shouldEndSession));
+}
+
+function songFinderParameter(intent, session, callback)
+{
+    var cardTitle = "Song Finder";
+    var speechOutput = null;
+    // Setting this to true ends the session and exits the skill.
+    var shouldEndSession = false;
+    var repromptText = null;
+
+    var title = getSessionAttribute("title", session);
+    var artist = null;
+
+    if(title === null)
+    {
+        title = getParameterValue("parameterString", intent, session);
+        speechOutput = "From which artist?";
+        repromptText = "Please say the artist name, part of it or say 'don't know'";
+        sessionAttributes = createSongFinderAttributes(title);
+
+        callback(sessionAttributes,
+        buildSpeechletResponse(cardTitle, speechOutput, repromptText, shouldEndSession));
+    }
+    else
+    {
+        artist = getParameterValue("parameterString", intent, session);
+
+        console.log("Searching for title " + title + " by " + artist);
+
+        //spotifyConnector.findTrack(title, artist, function(err, data)
+        spotifyConnector.test(function(err, data)
+        {
+            if(err)
+            {
+                console.log("Error: " + err);
+
+                speechOutput = "Error searching song, sorry!";
+            }
+            else
+            {
+                console.log("Search result: " + JSON.stringify(data.body));
+
+                speechOutput = "First result is: ";
+            }
+
+            callback(sessionAttributes,
+                buildSpeechletResponse(cardTitle, speechOutput, repromptText, shouldEndSession));    
+        });
+        
+    }
+
+}
+
+function createSongFinderAttributes(title, searchResult, selectedSong)
+{
+    return {
+        title: title,
+        searchResult: searchResult,
+        selectedSong: selectedSong
+    };
 }
 
 /**
@@ -268,12 +345,22 @@ function saveMilkLog(intent, session, callback) {
          buildSpeechletResponse(cardTitle, speechOutput, repromptText, shouldEndSession));
 }
 
-function getParameterValue(name, intent, session)
+function getSessionAttribute(attrbName, session)
 {
     if(session)
         if(session.attributes)
-            if(session.attributes[name])
-                return session.attributes[name];
+            if(session.attributes[attrbName])
+                return session.attributes[attrbName];
+
+    return null;
+}
+
+function getParameterValue(name, intent, session)
+{
+    var value = getSessionAttribute(name, session);
+
+    if(value !== null)
+        return value;
             
     if(intent.slots[name])
         if(intent.slots[name].value !== null && intent.slots[name].value !== undefined)

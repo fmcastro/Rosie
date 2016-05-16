@@ -9,6 +9,7 @@
   },
   "dependencies": {
     "edit-google-spreadsheet": "^0.2.21",
-    "telnet-client": "^0.9.2"
+    "telnet-client": "^0.9.2",
+    "spotify-web-api-node": "^2.3.0"
   }
 }

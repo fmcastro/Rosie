@@ -4,3 +4,4 @@ googleLogin.json
 key.pem
 
 node_modules
+*.tgz
